@@ -18,29 +18,26 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          # 파이썬 패키지 캐싱
-          cache: 'pip'
+          # 주석: requirements.txt가 없어도 에러가 나지 않도록 파이썬 캐싱은 잠시 끕니다.
 
       - name: Install dependencies
         run: |
           pip install requests playwright
 
-      # ⭐ 핵심: Playwright 브라우저 캐싱 설정
+      # ⭐ 핵심: Playwright 브라우저 캐싱 (파일 기준이 아닌 이름 기준으로 변경)
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@v3
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('**/requirements.txt') }}
+          key: ${{ runner.os }}-playwright-v1  # 고정된 키 값을 사용합니다.
           restore-keys: |
             ${{ runner.os }}-playwright-
 
-      # 캐시가 없을 때만 브라우저 설치
       - name: Install Playwright Browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: playwright install chromium --with-deps
 
-      # 캐시가 있어도 필요한 시스템 의존성만 설치 (매우 빠름)
       - name: Install Playwright system dependencies
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: playwright install-deps chromium
