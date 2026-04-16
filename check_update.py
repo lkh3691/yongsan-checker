@@ -1,62 +1,60 @@
-from playwright.sync_api import sync_playwright
-import os
-import requests
-import re
+name: Check Attendance
 
-# 감시할 설정
-PROGRAMS = {
-    "오전반": "69c24195847d148cf20ca6c1",
-    "오후반": "69c24207847d148cf20ca80a"
-}
-TOKEN = os.getenv("TELEGRAM_TOKEN")
-CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
 
-def get_count(p_idx):
-    url = f"https://makeinyongsan.kr/program/view/{p_idx}"
-    try:
-        with sync_playwright() as p:
-            # 브라우저 실행
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
-            page.goto(url)
-            # 화면이 다 그려질 때까지 3초 대기
-            page.wait_for_timeout(3000)
-            content = page.content()
-            browser.close()
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-            # "현재 참여 6명" 문구에서 숫자 추출
-            match = re.search(r"현재 참여\s*(\d+)명", content)
-            return match.group(1) if match else None
-    except Exception as e:
-        print(f"에러 발생 ({p_idx}): {e}")
-        return None
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          # 파이썬 패키지 캐싱
+          cache: 'pip'
 
-def send_telegram(message):
-    if TOKEN and CHAT_ID:
-        url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-        requests.post(url, data={"chat_id": CHAT_ID, "text": message})
+      - name: Install dependencies
+        run: |
+          pip install requests playwright
 
-# 메인 실행 반복문
-for name, p_idx in PROGRAMS.items():
-    current = get_count(p_idx)
-    
-    if current:
-        file_path = f"last_count_{name}.txt"
-        
-        # 이전 숫자 읽기
-        if os.path.exists(file_path):
-            with open(file_path, "r") as f:
-                last = f.read().strip()
-        else:
-            last = ""
-        
-        # 숫자가 바뀌었을 때만 알림
-        if current != last:
-            msg = f"📢 [{name}] 인원 변동 감지!\n현재 인원: {current}명\n링크: https://makeinyongsan.kr/program/view/{p_idx}"
-            send_telegram(msg)
-            
-            # 새로운 숫자 저장
-            with open(file_path, "w") as f:
-                f.write(current)
-    else:
-        print(f"{name} 정보를 읽지 못했습니다.")
+      # ⭐ 핵심: Playwright 브라우저 캐싱 설정
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      # 캐시가 없을 때만 브라우저 설치
+      - name: Install Playwright Browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: playwright install chromium --with-deps
+
+      # 캐시가 있어도 필요한 시스템 의존성만 설치 (매우 빠름)
+      - name: Install Playwright system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: playwright install-deps chromium
+
+      - name: Run script
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python check_update.py
+
+      - name: Update record
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add last_count_*.txt
+          git commit -m "Update counts" || exit 0
+          git push
