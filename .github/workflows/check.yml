@@ -1,4 +1,4 @@
-name: Check Attendance Update
+name: Check Attendance
 
 on:
   schedule:
@@ -21,18 +21,20 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install requests beautifulsoup4
+          pip install requests playwright
+          # 가상 브라우저 설치 (이게 꼭 필요합니다)
+          playwright install chromium --with-deps
 
-      - name: Run check script
+      - name: Run script
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python check_update.py
 
-      - name: Commit and Push changes
+      - name: Update record
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add last_count_*.txt
-          # 변경사항이 있을 때만 커밋
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Update attendance counts" && git push)
+          git commit -m "Update counts" || exit 0
+          git push
