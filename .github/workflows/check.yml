@@ -1,4 +1,4 @@
-name: Check Attendance
+name: Check Attendance Update
 
 on:
   schedule:
@@ -8,26 +8,31 @@ on:
 jobs:
   run-bot:
     runs-on: ubuntu-latest
-    permissions: # 이 부분을 추가하여 권한을 명시적으로 부여합니다.
+    permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4 # 최신 버전으로 업데이트
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Set up Python
-        uses: actions/setup-python@v5 # 최신 버전으로 업데이트
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
       - name: Install dependencies
-        run: pip install requests beautifulsoup4
-      - name: Run Script
+        run: |
+          pip install requests beautifulsoup4
+
+      - name: Run check script
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python check_update.py
-- name: Update record
+
+      - name: Commit and Push changes
         run: |
-          git config --global user.name 'github-actions'
-          git config --global user.email 'github-actions@github.com'
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add last_count_*.txt
-          git commit -m "Update counts" || exit 0
-          # GITHUB_TOKEN을 사용하여 명시적으로 푸시
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:${{ github.ref }}
+          # 변경사항이 있을 때만 커밋
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update attendance counts" && git push)
