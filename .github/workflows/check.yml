@@ -2,18 +2,20 @@ name: Check Attendance
 
 on:
   schedule:
-    - cron: '*/15 * * * *' # 15분마다 실행
+    - cron: '*/15 * * * *'
   workflow_dispatch:
 
 jobs:
   run-bot:
     runs-on: ubuntu-latest
+    permissions: # 이 부분을 추가하여 권한을 명시적으로 부여합니다.
+      contents: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4 # 최신 버전으로 업데이트
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5 # 최신 버전으로 업데이트
         with:
-          python-version: '3.9'
+          python-version: '3.11'
       - name: Install dependencies
         run: pip install requests beautifulsoup4
       - name: Run Script
