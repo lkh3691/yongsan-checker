@@ -2,7 +2,7 @@ name: Check Attendance
 
 on:
   schedule:
-    - cron: '*/5 * * * *'  # 5분마다 실행 요청 (가장 공격적인 설정)
+    - cron: '*/30 * * * *'  # 5분마다 실행 요청 (가장 공격적인 설정)
   workflow_dispatch:      # 언제든 수동 실행 가능
 
 # 동일 작업이 겹칠 경우 이전 작업을 정리하여 효율성 높임
