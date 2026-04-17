@@ -2,7 +2,8 @@ name: Check Attendance
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    # 15분 간격은 유지하되, 정각을 피해서 7분, 22분... 식으로 설정
+    - cron: '7,22,37,52 * * * *'
   workflow_dispatch:
 
 jobs:
