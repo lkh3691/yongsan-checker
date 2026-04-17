@@ -2,9 +2,13 @@ name: Check Attendance
 
 on:
   schedule:
-    # 15분 간격은 유지하되, 정각을 피해서 7분, 22분... 식으로 설정
-    - cron: '7,22,37,52 * * * *'
-  workflow_dispatch:
+    - cron: '*/5 * * * *'  # 5분마다 실행 요청 (가장 공격적인 설정)
+  workflow_dispatch:      # 언제든 수동 실행 가능
+
+# 동일 작업이 겹칠 경우 이전 작업을 정리하여 효율성 높임
+concurrency:
+  group: attendance-check
+  cancel-in-progress: true
 
 jobs:
   run-bot:
@@ -19,19 +23,17 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          # 주석: requirements.txt가 없어도 에러가 나지 않도록 파이썬 캐싱은 잠시 끕니다.
 
       - name: Install dependencies
         run: |
           pip install requests playwright
 
-      # ⭐ 핵심: Playwright 브라우저 캐싱 (파일 기준이 아닌 이름 기준으로 변경)
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@v3
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-v1  # 고정된 키 값을 사용합니다.
+          key: ${{ runner.os }}-playwright-v1
           restore-keys: |
             ${{ runner.os }}-playwright-
 
